@@ -4,77 +4,114 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Audio Recorder</title>
-	<style>
-		button {
-			border-radius: 15px;
-		}
-	</style>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            background-color: darkslateblue;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        button {
+            border-radius: 15px;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+    </style>
 </head>
-<body style="text-align:center; background-color: darkslateblue;">
-	<br><br><br><br>
-	<button id="recordButton" style="font-size:1000%; background-color: crimson; border-radius: 50%;">🎤</button><br><br><br>
-	<button id="verySlowPlayback" style="font-size:200%; background-color: royalblue;">🦖</button>&nbsp;&nbsp;
-	<button id="slowPlayback" style="font-size:200%; background-color: darkgoldenrod;">🐊</button>&nbsp;&nbsp;
-	<button id="normalPlayback" style="font-size:200%; background-color: green;">😲</button>&nbsp;&nbsp;
-	<button id="fastPlayback" style="font-size:200%; background-color: darkcyan;">👻</button>&nbsp;&nbsp;
-	<button id="veryFastPlayback" style="font-size:200%; background-color: darkorchid;">👽</button>
+<body>
+    <button id="recordButton" style="font-size:1000%; background-color: crimson; border-radius: 50%;">🎤</button><br><br>
+    <div>
+        <button id="verySlowPlayback" style="font-size:200%; background-color: royalblue;">🦖</button>
+        <button id="slowPlayback" style="font-size:200%; background-color: darkgoldenrod;">🐊</button>
+        <button id="normalPlayback" style="font-size:200%; background-color: green;">😲</button>
+        <button id="fastPlayback" style="font-size:200%; background-color: darkcyan;">👻</button>
+        <button id="veryFastPlayback" style="font-size:200%; background-color: darkorchid;">👽</button>
+    </div>
 
-	<script>
-		let mediaRecorder;
-		let audioChunks = [];
-		let audioBlob;
-		let audioURL;
-		let audioContext = new (window.AudioContext || window.webkitAudioContext)();
-		let stream;
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let audioBlob;
+        let audioURL;
+        let audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let stream;
+        let isSpacePressed = false;
 
-		async function initializeMicrophone() {
-			stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-		}
+        async function initializeMicrophone() {
+            stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
 
-		document.getElementById('recordButton').addEventListener('mousedown', startRecording);
-		document.getElementById('recordButton').addEventListener('mouseup', stopRecording);
-		document.getElementById('recordButton').addEventListener('touchstart', startRecording);
-		document.getElementById('recordButton').addEventListener('touchend', stopRecording);
+        function preventDefault(event) {
+            event.preventDefault();
+        }
 
-		document.getElementById('verySlowPlayback').addEventListener('click', () => playAudio(1/1.5/1.5));
-		document.getElementById('slowPlayback').addEventListener('click', () => playAudio(1/1.5));
-		document.getElementById('normalPlayback').addEventListener('click', () => playAudio(1));
-		document.getElementById('fastPlayback').addEventListener('click', () => playAudio(1.5));
-		document.getElementById('veryFastPlayback').addEventListener('click', () => playAudio(1.5*1.5));
+        document.getElementById('recordButton').addEventListener('mousedown', startRecording);
+        document.getElementById('recordButton').addEventListener('mouseup', stopRecording);
+        document.getElementById('recordButton').addEventListener('touchstart', (event) => { preventDefault(event); startRecording(); });
+        document.getElementById('recordButton').addEventListener('touchend', (event) => { preventDefault(event); stopRecording(); });
 
-		async function startRecording() {
-			if (!stream) await initializeMicrophone();
-			mediaRecorder = new MediaRecorder(stream);
-			mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
-			mediaRecorder.onstop = () => {
-				audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-				audioURL = URL.createObjectURL(audioBlob);
-				audioChunks = [];
-			};
-			mediaRecorder.start();
-		}
+        document.addEventListener('keydown', (event) => {
+            if (event.code === 'Space' && !isSpacePressed) {
+                isSpacePressed = true;
+                startRecording();
+            }
+        });
 
-		function stopRecording() {
-			if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-				mediaRecorder.stop();
-			}
-		}
+        document.addEventListener('keyup', (event) => {
+            if (event.code === 'Space') {
+                isSpacePressed = false;
+                stopRecording();
+            }
+        });
 
-		function playAudio(playbackRate) {
-			if (!audioURL) return;
-			fetch(audioURL)
-				.then(response => response.arrayBuffer())
-				.then(data => audioContext.decodeAudioData(data))
-				.then(buffer => {
-					let source = audioContext.createBufferSource();
-					source.buffer = buffer;
-					source.playbackRate.value = playbackRate;
-					source.connect(audioContext.destination);
-					source.start();
-				});
-		}
+        document.getElementById('verySlowPlayback').addEventListener('click', () => playAudio(1/1.5/1.5));
+        document.getElementById('slowPlayback').addEventListener('click', () => playAudio(1/1.5));
+        document.getElementById('normalPlayback').addEventListener('click', () => playAudio(1));
+        document.getElementById('fastPlayback').addEventListener('click', () => playAudio(1.5));
+        document.getElementById('veryFastPlayback').addEventListener('click', () => playAudio(1.5*1.5));
 
-		initializeMicrophone();
-	</script>
+        async function startRecording() {
+            if (!stream) await initializeMicrophone();
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+            mediaRecorder.onstop = () => {
+                audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                audioURL = URL.createObjectURL(audioBlob);
+                audioChunks = [];
+            };
+            mediaRecorder.start();
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+        }
+
+        function playAudio(playbackRate) {
+            if (!audioURL) return;
+            fetch(audioURL)
+                .then(response => response.arrayBuffer())
+                .then(data => audioContext.decodeAudioData(data))
+                .then(buffer => {
+                    let source = audioContext.createBufferSource();
+                    source.buffer = buffer;
+                    source.playbackRate.value = playbackRate;
+                    source.connect(audioContext.destination);
+                    source.start();
+                });
+        }
+
+        initializeMicrophone();
+    </script>
 </body>
 </html>
